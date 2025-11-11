@@ -1,4 +1,5 @@
 import asyncio
+from inspect import AGEN_CLOSED
 import random
 import os
 import logging
@@ -56,8 +57,15 @@ async def parse_by_inn(messages: Message, bot: Bot):
             await page.screenshot(path=f'./result/screenshot/third_site/{messages.text}(2).png')
             
             name_organization_text = await page.locator("//span[contains(@class, 'pb-company-name')]").first.text_content()
-            # inn_organization_text = str(page.locator("//a[contains(@data-appeal-kind, 'EGRUL_INN')]"))
-            inn_organization_text = '7728786311'
+            inn_organization_text = await page.locator("//a[contains(@data-appeal-kind, 'EGRUL_INN')]").first.text_content()
+            first_date_organization_text = await page.locator("//div[contains(@class, 'pb-company-field-value')]").nth(3).text_content()
+            age_organization_text = "11 лет"
+            address_organization_text = await page.locator("//a[contains(@data-appeal-kind, 'EGRUL_ADRES')]").first.text_content()
+            capital_organization_text = 'some text'
+            main_activity_organization_text = await page.locator("//a[contains(@data-appeal-kind, 'EGRUL_OKVED')]").first.text_content()
+            registrar_organization_text = 'some text'
+            average_number_of_employees_organization_text = await page.locator("//a[contains(@data-appeal-kind, 'SSCHR')]").first.text_content()
+
 
             logger.info('Конец парсинга публичного бизнеса')
             
@@ -70,31 +78,31 @@ async def parse_by_inn(messages: Message, bot: Bot):
 
 <b>ОБЩАЯ ИНФОРМАЦИЯ:</b>
 ИНН: {inn_organization_text}
-Возраст: 11 лет (регистрация 12.10.2011)
-Адрес: 121596 г. Москва, Ул. Горбунова, Д. 2, Корп Стр. 3,  Кв Этаж/помещ 8/ii Ком./офис 38д/222а 
-Уставный капитал: 10000 руб.
-Основной вид деятельности: 41.20, Строительство жилых и нежилых зданий
-Регистратор: Межрайонная инспекция Федеральной налоговой службы № 46 по г. Москве 
+Возраст: {age_organization_text} (регистрация {first_date_organization_text})
+Адрес: {address_organization_text}
+Уставный капитал: {capital_organization_text}
+Основной вид деятельности: {main_activity_organization_text}
+Регистратор: {registrar_organization_text}
 
 <b>ОРГАНЫ УПРАВЛЕНИЯ:</b>
 <b>Генеральный директор:</b>
-Русак Тимофей Викторович
-(ИНН	773315864324) период с 01.04.2014
+
+(ИНН ) период с 01.04.2014
 <b>Учредители:</b>
-Аль-тамими Самир Алиевич (10000 руб.) 
-(ИНН /772458576001) <b>(Чистая прибыль от бизнеса за три года ~ 45 млн. руб.)</b>
+
+(ИНН /) <b>(Чистая прибыль от бизнеса за три года ~ млн. руб.)</b>
 
 <b>ФИНАНСОВАЯ ИНФОРМАЦИЯ:</b>
-Среднесписочная численность:~ 115 чел.
-Выручка от продажи за 2021: 179 559 000 ₽
-Чистая прибыль за 2021: -9 100 000 ₽
-Чистая прибыль за последние три года: ~ +20 000 000 ₽
+Среднесписочная численность:~ {average_number_of_employees_organization_text}
+Выручка от продажи за 2021: 
+Чистая прибыль за 2021:     
+Чистая прибыль за последние три года: ~ 
 Исполнительное производство: 
-Как ответчик 0 руб.
-Как истец 0 руб
+Как ответчик  руб.
+Как истец  руб
 
-Последние изменения были совершены 15.02.2022
-Данные актуальны на 17.08.2022
+Последние изменения были совершены 
+Данные актуальны на 
 ''', parse_mode='HTML')
 
     except Exception as e:
