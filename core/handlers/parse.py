@@ -7,9 +7,13 @@ import logging
 from aiogram import Bot
 from aiogram.types import Message
 from aiogram.enums import parse_mode
+from aiogram.fsm.context import FSMContext
 from playwright.async_api import async_playwright
 from playwright.sync_api import sync_playwright
 from datetime import datetime
+
+from core.keyboards.keyboard import main_menu
+from core.utils.state import UsersSteps
 
 logger = logging.getLogger(__name__)
 
@@ -55,7 +59,14 @@ async def get_execution_data(inn):
             "plaintiff": "0 руб."
         }
 
-async def parse_by_inn(messages: Message, bot: Bot):
+
+async def start_parse_by_inn(messages: Message, state: FSMContext):
+    await messages.answer('Введите <b>ИНН</b> фирмы, которую необходимо проверить:',
+                         parse_mode='HTML')
+    await state.set_state(UsersSteps.GET_INN)
+
+
+async def parse_by_inn(messages: Message, state: FSMContext):
     await messages.answer(f'{messages.from_user.first_name} подождите немного! Ищем данные по ИНН:{messages.text}')
 
     try:
@@ -210,8 +221,7 @@ async def parse_by_inn(messages: Message, bot: Bot):
             await page.screenshot(path=f'./result/screenshot/third_site/{messages.text}(3).png')
             logger.info('Конец парсинга публичного бизнеса')
             
-            await context.close()
-            await browser.close()
+            
 
             await messages.answer(f'{messages.from_user.first_name}, данные по ИНН:{messages.text} успешно найдены!')
             
@@ -244,10 +254,13 @@ async def parse_by_inn(messages: Message, bot: Bot):
 
 Последние изменения были совершены 
 Данные актуальны на {actual_data_date_text}
-''', parse_mode='HTML')
+''', parse_mode='HTML', reply_markup=main_menu)
+
+            await context.close()
+            await browser.close()
+            await state.clear()
 
     except Exception as e:
         logger.error(f'Ошибка в парсинге публичного бизнеса: {e}')
         await messages.answer(f'{messages.from_user.first_name}, ошибка в поиске данных по ИНН:{messages.text}')
-
-    
+        
