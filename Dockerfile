@@ -29,7 +29,8 @@ WORKDIR /friends_bot
 
 RUN pip install uv
 
-COPY pyproject.toml uv.lock .
+COPY pyproject.toml .
+COPY uv.lock .
 
 RUN uv sync
 
