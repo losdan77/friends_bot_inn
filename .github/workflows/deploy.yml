@@ -35,12 +35,12 @@ jobs:
 
     # 6. Проверка Docker Compose
     - name: Lint Docker Compose
-      run: docker-compose -f docker-compose.yml config
+      run: docker-compose -f docker-compose.yaml config
 
     # 7. Сборка Docker образов
     - name: Build Docker images
       run: |
-        docker-compose -f docker-compose.yml build
+        docker-compose -f docker-compose.yaml build
 
     # 8. Копирование файлов на сервер
     - name: Deploy files to server
