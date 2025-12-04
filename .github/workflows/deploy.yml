@@ -51,7 +51,7 @@ jobs:
     # 10. Запуск Docker Compose на сервере
     - name: Restart application
       run: |
-        ssh -o StrictHostKeyChecking=no los@176.108.242.199 << 'EOF'
+        ssh -o StrictHostKeyChecking=no losdan@176.108.242.199 << 'EOF'
           cd ~/friends_bot
           sudo docker-compose down
           sudo docker-compose build
