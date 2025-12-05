@@ -358,7 +358,7 @@ async def parse_by_inn(messages: Message, state: FSMContext):
 {founders_output}
 
 <b>ФИНАНСОВАЯ ИНФОРМАЦИЯ:</b>
-Среднесписочная численность:~ {employees_count} руб.
+Среднесписочная численность:~ {employees_count}
 Выручка от продажи за {financial_year}: {financial_money_income_last_year} руб.
 Чистая прибыль за {financial_year}: {financial_money_profit_last_year} руб.
 Чистая прибыль за последние три года: ~ {financial_money_profit_last_three_year} руб.
