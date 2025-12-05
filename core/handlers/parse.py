@@ -199,58 +199,83 @@ async def parse_by_inn(messages: Message, state: FSMContext):
             #     logger.error(f"Ошибка парсинга данных об учредителях из публичного бизнеса")
             #     founder_name = "Н/A"
             #     founder_inn = ""
-            # Учредители
+            # Учредители (работает для 1 и более)
             founders_list = []
             try:
-                all_blocks = await page.locator(
+                # Шаг 1: Находим заголовок и получаем его родительский блок
+                header_block = page.locator(
                     "xpath=//span[contains(text(), 'Сведения об учредителях')]"
-                    "/ancestor::div[@class='pb-panel']"
-                    "//div[@class='pb-company-block']"
+                    "/ancestor::div[@class='pb-company-block']"
+                ).first
+                
+                # Шаг 2: Находим родительский контейнер (pb-panel)
+                panel = header_block.locator("xpath=ancestor::div[@class='pb-panel']").first
+                
+                # Шаг 3: Внутри этого контейнера получаем все pb-company-block, кроме первого (заголовка)
+                all_founder_blocks = await panel.locator(
+                    "xpath=.//div[@class='pb-company-block']"
                 ).all()
                 
-                logger.info(f"Найдено блоков учредителей: {len(all_blocks)}")
+                logger.info(f"Всего блоков в панели: {len(all_founder_blocks)}")
                 
-                for block_idx, block in enumerate(all_blocks[1:], 1):
+                # Пропускаем первый блок (это заголовок с data-group="sveduchr")
+                for block_idx, block in enumerate(all_founder_blocks[1:], 1):
                     try:
-                        founder_name_elem = block.locator(
-                            "xpath=.//div[@class='pb-company-block__row'][1]"
-                        ).first
+                        # ФИО - ищем либо <a> без fs-big, либо <span class="font-weight-bold">
+                        founder_name = None
                         
-                        founder_name = await founder_name_elem.text_content(timeout=3000)
-                        founder_name = " ".join(founder_name.split()) if founder_name else "N/A"
+                        # Сначала пробуем <a>
+                        try:
+                            founder_name = await block.locator(
+                                "xpath=.//a[not(contains(@class, 'fs-big'))]"
+                            ).first.text_content(timeout=2000)
+                        except:
+                            pass
                         
-                        founder_inn_rows = await block.locator(
-                            "xpath=.//div[@class='pb-company-block__row']"
-                        ).all()
+                        # Если <a> не найдена, пробуем <span>
+                        if not founder_name:
+                            try:
+                                founder_name = await block.locator(
+                                    "xpath=.//span[@class='font-weight-bold']"
+                                ).first.text_content(timeout=2000)
+                            except:
+                                pass
                         
-                        founder_inn = "N/A"
-                        for row in founder_inn_rows:
-                            row_text = await row.text_content(timeout=3000)
-                            if "ИНН:" in row_text:
-                                inn_value = await row.locator(
-                                    "xpath=.//div[@class='pb-company-field-value']"
-                                ).first.text_content(timeout=3000)
-                                founder_inn = inn_value.strip() if inn_value else "N/A"
-                                break
+                        founder_name = founder_name.strip() if founder_name else "N/A"
+                        founder_name = " ".join(founder_name.split())
+                        
+                        # ИНН - внутри ЭТОГО конкретного блока ищем ИНН
+                        founder_inn = await block.locator(
+                            "xpath=.//div[contains(., 'ИНН:')]/ancestor::div[@class='pb-company-field']//div[@class='pb-company-field-value']"
+                        ).first.text_content(timeout=2000)
+                        
+                        founder_inn = founder_inn.strip() if founder_inn else "N/A"
                         
                         if founder_name != "N/A":
-                            founders_list.append({"name": founder_name, "inn": founder_inn})
+                            founders_list.append({
+                                "name": founder_name,
+                                "inn": founder_inn
+                            })
                             logger.info(f"✓ Учредитель {block_idx}: {founder_name} (ИНН: {founder_inn})")
-                    
+                        else:
+                            logger.warning(f"Учредитель {block_idx}: ФИО не найдено")
+
                     except Exception as e:
                         logger.warning(f"Ошибка парсинга учредителя {block_idx}: {e}")
                         continue
 
             except Exception as e:
-                logger.error(f"Ошибка при получении учредителей: {e}")
+                logger.error(f"Ошибка при получении учредителей: {e}", exc_info=True)
 
-            # Форматирование учредителей
+            # Форматирование для вывода
             if founders_list:
                 founders_output = "<b>Учредители:</b>\n"
                 for idx, f in enumerate(founders_list, 1):
-                    founders_output += f"{idx}. {f['name']}\n   ИНН: {f['inn']}\n"
+                    founders_output += f"{idx}. {f['name']} (ИНН {f['inn']})\n"
             else:
                 founders_output = "<b>Учредители:</b>\nДанные не найдены\n"
+
+            logger.info(f"Всего распарсено учредителей: {len(founders_list)}")
 
             # ФИНАНСОВАЯ ИНФОРМАЦИЯ
             try:
@@ -330,14 +355,13 @@ async def parse_by_inn(messages: Message, state: FSMContext):
 <b>{general_director_organization_position}:</b>
 {general_director_organization_name}
 {general_director_organization_inn}
-<b>Учредители:</b>
 {founders_output}
 
 <b>ФИНАНСОВАЯ ИНФОРМАЦИЯ:</b>
-Среднесписочная численность:~ {employees_count}
-Выручка от продажи за {financial_year}: {financial_money_income_last_year}
-Чистая прибыль за {financial_year}: {financial_money_profit_last_year}
-Чистая прибыль за последние три года: ~ {financial_money_profit_last_three_year}
+Среднесписочная численность:~ {employees_count} руб.
+Выручка от продажи за {financial_year}: {financial_money_income_last_year} руб.
+Чистая прибыль за {financial_year}: {financial_money_profit_last_year} руб.
+Чистая прибыль за последние три года: ~ {financial_money_profit_last_three_year} руб.
 Исполнительное производство: 
 Как ответчик   руб.
 Как истец  руб
